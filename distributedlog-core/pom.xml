@@ -21,10 +21,10 @@
   <parent>
     <groupId>com.twitter</groupId>
     <artifactId>distributedlog</artifactId>
-    <version>0.3.51-SNAPSHOT</version>
+    <version>0.4.0-incubating-SNAPSHOT</version>
   </parent>
   <artifactId>distributedlog-core</artifactId>
-  <name>DistributedLog Core Library</name>
+  <name>Apache DistributedLog :: Core Library</name>
   <dependencies>
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
@@ -38,10 +38,6 @@
         <exclusion>
           <groupId>org.slf4j</groupId>
           <artifactId>slf4j-log4j12</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.twitter</groupId>
-          <artifactId>finagle-core_2.11</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

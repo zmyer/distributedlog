@@ -1,14 +1,30 @@
-#!/bin/bash
-
-BASEDIR=$(dirname "$0")
-DISTRIBUTEDLOG_ROOT="${BASEDIR}/.."
+#!/usr/bin/env bash
+#
+#/**
+# * Copyright 2007 The Apache Software Foundation
+# *
+# * Licensed to the Apache Software Foundation (ASF) under one
+# * or more contributor license agreements.  See the NOTICE file
+# * distributed with this work for additional information
+# * regarding copyright ownership.  The ASF licenses this file
+# * to you under the Apache License, Version 2.0 (the
+# * "License"); you may not use this file except in compliance
+# * with the License.  You may obtain a copy of the License at
+# *
+# *     http://www.apache.org/licenses/LICENSE-2.0
+# *
+# * Unless required by applicable law or agreed to in writing, software
+# * distributed under the License is distributed on an "AS IS" BASIS,
+# * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# * See the License for the specific language governing permissions and
+# * limitations under the License.
+# */
 
 set -e
 shopt -s dotglob
 
-cd ${DISTRIBUTEDLOG_ROOT}
-
-gitsha=`git rev-parse HEAD`
+DISTRIBUTEDLOG_ROOT=$(git rev-parse --show-toplevel)
+GITSHA=$(git rev-parse HEAD)
 
 # clean the dist
 find . -name lib | xargs rm -r
@@ -16,7 +32,7 @@ rm -rf dist/*
 
 # create the layout
 for module in distributedlog-service distributedlog-benchmark distributedlog-tutorials/distributedlog-basic distributedlog-tutorials/distributedlog-messaging; do
-    mkdir -p dist/release/${module}/{bin,conf,lib}
+    mkdir -p "dist/release/${module}/{bin,conf,lib}"
 done
 
 # build the package
@@ -27,6 +43,7 @@ cp -rf distributedlog-service/bin/* dist/release/distributedlog-service/bin
 cp -rf distributedlog-service/conf/* dist/release/distributedlog-service/conf
 cp -rf distributedlog-service/lib/* dist/release/distributedlog-service/lib
 cp -rf distributedlog-service/target/distributedlog-service-*.jar dist/release/distributedlog-service
+cp -rf vagrant dist/release/
 
 # build the distributedlog-benchmark
 cp -rf distributedlog-benchmark/bin/* dist/release/distributedlog-benchmark/bin
@@ -48,7 +65,7 @@ cp -rf distributedlog-tutorials/distributedlog-messaging/target/distributedlog-m
 
 # release
 cd dist/release
-zip -r distributedlog-all-${gitsha}.zip distributedlog-service distributedlog-benchmark distributedlog-tutorials > /dev/null
-zip -r distributedlog-service-${gitsha}.zip distributedlog-service >/dev/null
-zip -r distributedlog-benchmark-${gitsha}.zip distributedlog-benchmark >/dev/null
-zip -r distributedlog-tutorials-${gitsha}.zip distributedlog-tutorials >/dev/null
+zip -r "distributedlog-all-${GITSHA}.zip" distributedlog-service distributedlog-benchmark distributedlog-tutorials > /dev/null
+zip -r "distributedlog-service-${GITSHA}.zip" distributedlog-service >/dev/null
+zip -r "distributedlog-benchmark-${GITSHA}.zip" distributedlog-benchmark >/dev/null
+zip -r "distributedlog-tutorials-${GITSHA}.zip" distributedlog-tutorials >/dev/null

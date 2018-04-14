@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.twitter.distributedlog.exceptions.AlreadyTruncatedTransactionException;
+import com.twitter.distributedlog.exceptions.BKTransmitException;
 import com.twitter.distributedlog.exceptions.LogEmptyException;
 import com.twitter.distributedlog.exceptions.LogNotFoundException;
 import com.twitter.distributedlog.exceptions.LogReadException;
@@ -35,6 +36,7 @@ import com.twitter.distributedlog.logsegment.LogSegmentMetadataStore;
 import com.twitter.distributedlog.util.FutureUtils;
 import com.twitter.distributedlog.util.OrderedScheduler;
 import com.twitter.distributedlog.util.Utils;
+import org.apache.bookkeeper.client.BKException;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -319,6 +321,28 @@ public class TestBKDistributedLogManager extends TestDistributedLogBase {
         }
 
         bkdlm1.close();
+    }
+
+    @Test(timeout = 60000)
+    public void testTwoWritersOnLockDisabled() throws Exception {
+        DistributedLogConfiguration confLocal = new DistributedLogConfiguration();
+        confLocal.addConfiguration(conf);
+        confLocal.setOutputBufferSize(0);
+        confLocal.setWriteLockEnabled(false);
+        String name = "distrlog-two-writers-lock-disabled";
+        DistributedLogManager manager = createNewDLM(confLocal, name);
+        AsyncLogWriter writer1 = FutureUtils.result(manager.openAsyncLogWriter());
+        FutureUtils.result(writer1.write(DLMTestUtil.getLogRecordInstance(1L)));
+        AsyncLogWriter writer2 = FutureUtils.result(manager.openAsyncLogWriter());
+        FutureUtils.result(writer2.write(DLMTestUtil.getLogRecordInstance(2L)));
+
+        // write a record to writer 1 again
+        try {
+            FutureUtils.result(writer1.write(DLMTestUtil.getLogRecordInstance(3L)));
+            fail("Should fail writing record to writer 1 again as writer 2 took over the ownership");
+        } catch (BKTransmitException bkte) {
+            assertEquals(BKException.Code.LedgerFencedException, bkte.getBKResultCode());
+        }
     }
 
     @Test(timeout = 60000)
@@ -935,10 +959,8 @@ public class TestBKDistributedLogManager extends TestDistributedLogBase {
                 new AtomicReference<Collection<LogSegmentMetadata>>();
 
         DistributedLogManager dlm = createNewDLM(conf, name);
-        ZooKeeperClient zkClient = ZooKeeperClientBuilder.newBuilder()
+        ZooKeeperClient zkClient = TestZooKeeperClientBuilder.newBuilder()
                 .uri(createDLMURI("/"))
-                .sessionTimeoutMs(10000)
-                .zkAclId(null)
                 .build();
 
         BKDistributedLogManager.createLog(conf, zkClient, ((BKDistributedLogManager) dlm).uri, name);
@@ -1089,10 +1111,9 @@ public class TestBKDistributedLogManager extends TestDistributedLogBase {
     public void testTruncationValidation() throws Exception {
         String name = "distrlog-truncation-validation";
         URI uri = createDLMURI("/" + name);
-        ZooKeeperClient zookeeperClient = ZooKeeperClientBuilder.newBuilder()
+        ZooKeeperClient zookeeperClient = TestZooKeeperClientBuilder.newBuilder()
             .uri(uri)
-            .zkAclId(null)
-            .sessionTimeoutMs(10000).build();
+            .build();
         OrderedScheduler scheduler = OrderedScheduler.newBuilder()
                 .name("test-truncation-validation")
                 .corePoolSize(1)
